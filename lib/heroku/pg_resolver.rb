@@ -7,13 +7,18 @@ module PGResolver
 
   def name_from_url(db_url)
     name = reverse_resolve(db_url)
-    Resolver.new(name, config_vars).pretty_name
+    if name
+      Resolver.new(name, config_vars).pretty_name
+    else
+      "Database on #{URI.parse(db_url).host}"
+    end
   end
 
   def reverse_resolve(db_url)
-   config_vars.detect do |name, url|
+    pair = config_vars.detect do |name, url|
       url == db_url && name != "DATABASE_URL"
-    end.first
+    end
+    pair && pair.first
   end
 
   def resolve_db(options={})
@@ -67,6 +72,7 @@ module PGResolver
     attr_reader :url, :db_id
 
     def initialize(db_id, config_vars)
+      raise ArgumentError unless db_id
       @db_id, @config_vars = db_id.upcase, config_vars
       @messages = []
       parse_config

@@ -188,7 +188,7 @@ private
 
     def display_info_shared
       attrs = heroku.info(app)
-      display_info("Data Size", "#{size_format(attrs[:database_size].to_i)}")
+      display_info("Data Size", "#{format_bytes(attrs[:database_size].to_i)}")
     end
 
     def display_info_dedicated(db)
@@ -221,21 +221,6 @@ private
       @seen_progress = progress
     end
 
-    KB = 1024      unless self.const_defined?(:KB)
-    MB = 1024 * KB unless self.const_defined?(:MB)
-    GB = 1024 * MB unless self.const_defined?(:GB)
-
-    def size_format(bytes)
-      return "#{bytes} B" if bytes < KB
-      return "#{(bytes / KB)} KB" if bytes < MB
-      return format("%.1f MB", (bytes.to_f / MB)) if bytes < GB
-      return format("%.2f GB", (bytes.to_f / GB))
-    end
-
-    def time_format(time)
-      time = Time.parse(time) if time.is_a?(String)
-      time.strftime("%Y-%m-%d %H:%M %Z")
-    end
   end
 end
 
