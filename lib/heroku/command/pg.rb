@@ -195,8 +195,16 @@ private
       db_info = heroku_postgresql_client(db[:url]).get_database
 
       db_info[:info].each do |i|
-        val = i['resolve_db_name'] ? name_from_url(i['value']) : i['value']
-        display_info i['name'], val
+        if i['value']
+          val = i['resolve_db_name'] ? name_from_url(i['value']) : i['value']
+          display_info i['name'], val
+        elsif i['values']
+          i['values'].each_with_index do |val,idx|
+            name = idx.zero? ? i['name'] : nil
+            val = i['resolve_db_name'] ? name_from_url(val) : val
+            display_info name, val
+          end
+        end
       end
     end
 
