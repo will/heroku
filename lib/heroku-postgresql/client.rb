@@ -12,7 +12,8 @@ module HerokuPostgresql
       @database_sha = sha(url)
       @heroku_postgresql_resource = RestClient::Resource.new(
         "#{@heroku_postgresql_host}/client/v10/databases",
-        :headers => { :heroku_client_version => Version })
+        :headers =>  { :x_heroku_gem_version  => Heroku::Client.version }
+        )
     end
 
     def ingress
@@ -59,23 +60,35 @@ module HerokuPostgresql
       end
     end
 
+    def display_heroku_warning(response)
+      warning = response.headers[:x_heroku_warning]
+      display warning if warning
+      response
+    end
+
     def http_get(path)
       checking_client_version do
         retry_on_exception(RestClient::Exception) do
-          sym_keys(json_decode(@heroku_postgresql_resource[path].get.to_s))
+          response = @heroku_postgresql_resource[path].get
+          display_heroku_warning response
+          sym_keys(json_decode(response.to_s))
         end
       end
     end
 
     def http_post(path, payload = {})
       checking_client_version do
-        sym_keys(json_decode(@heroku_postgresql_resource[path].post(json_encode(payload)).to_s))
+        response = @heroku_postgresql_resource[path].post(json_encode(payload))
+        display_heroku_warning response
+        sym_keys(json_decode(response.to_s))
       end
     end
 
     def http_put(path, payload = {})
       checking_client_version do
-        sym_keys(json_decode(@heroku_postgresql_resource[path].put(json_encode(payload)).to_s))
+        response = @heroku_postgresql_resource[path].put(json_encode(payload))
+        display_heroku_warning response
+        sym_keys(json_decode(response.to_s))
       end
     end
   end
