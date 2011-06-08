@@ -22,7 +22,7 @@ module Heroku::Command
       }
 
       if backups.empty?
-        display("No backups. Capture one with `heroku pgbackups:capture`.")
+        no_backups_error!
       else
         display Display.new.render([["ID", "Backup Time", "Size", "Database"]], backups)
       end
@@ -77,24 +77,37 @@ module Heroku::Command
       end
     end
 
-    # pgbackups:restore [DATABASE] <BACKUP_ID|BACKUP_URL>
+    # pgbackups:restore [<DATABASE> [BACKUP_ID|BACKUP_URL]]
     #
-    # restore a backup to a database id
+    # restore a backup to a database
     #
-    # if no DATABASE is specified, defaults to DATABASE_URL
+    # if no DATABASE is specified, defaults to DATABASE_URL and latest backup
+    # if DATABASE is specified, but no BACKUP_ID, defaults to latest backup
     #
     def restore
       deprecate_dash_dash_db("pgbackups:restore")
 
-      args.unshift "DATABASE" if 1 == args.size
+      if 0 == args.size
+        db = resolve_db(:allow_default => true)
+        backup_id = :latest
+      elsif 1 == args.size
+        db = resolve_db
+        backup_id = :latest
+      else
+        db = resolve_db
+        backup_id = args.shift
+      end
 
-      db = resolve_db
       to_name = db[:name]
       to_url  = db[:url]
 
-      backup_id = args.shift
-
-      if backup_id =~ /^http(s?):\/\//
+      if :latest == backup_id
+        backup = pgbackup_client.get_latest_backup
+        no_backups_error! if {} == backup
+        to_uri = URI.parse backup["to_url"]
+        backup_id = File.basename(to_uri.path, '.*')
+        backup_id = "#{backup_id} (most recent)"
+      elsif backup_id =~ /^http(s?):\/\//
         from_url  = backup_id
         from_name = "EXTERNAL_BACKUP"
         from_uri  = URI.parse backup_id
@@ -293,6 +306,10 @@ module Heroku::Command
     end
 
     private
+
+    def no_backups_error!
+      error(" !   No backups. Capture one with `heroku pgbackups:capture`.")
+    end
 
     # lists all types of backups ('to_name' attribute)
     #
