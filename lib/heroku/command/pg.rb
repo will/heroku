@@ -40,7 +40,7 @@ module Heroku::Command
     def promote
       deprecate_dash_dash_db("pg:promote")
       follower_db = resolve_db(:required => 'pg:promote')
-      abort( " !  DATABASE_URL is already set to #{follower_db[:name]}") if follower_db[:default]
+      abort( " !   DATABASE_URL is already set to #{follower_db[:name]}") if follower_db[:default]
 
       display "Promoting #{follower_db[:name]} to DATABASE_URL"
       return unless confirm_command
