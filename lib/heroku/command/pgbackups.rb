@@ -39,7 +39,7 @@ module Heroku::Command
         b = pgbackup_client.get_latest_backup
       end
       abort("No backup found.") unless b['public_url']
-      display b['public_url']
+      display '"'+b['public_url']+'"'
     end
 
     # pgbackups:capture [DATABASE]
@@ -107,6 +107,8 @@ module Heroku::Command
         to_uri = URI.parse backup["to_url"]
         backup_id = File.basename(to_uri.path, '.*')
         backup_id = "#{backup_id} (most recent)"
+        from_url  = backup["to_url"]
+        from_name = "BACKUP"
       elsif backup_id =~ /^http(s?):\/\//
         from_url  = backup_id
         from_name = "EXTERNAL_BACKUP"

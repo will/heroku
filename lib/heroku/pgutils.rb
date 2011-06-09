@@ -14,6 +14,15 @@ module PgUtils
     %w(/ - \\ |)[ticks % 4]
   end
 
+  def ticking
+    ticks = 0
+    loop do
+      yield(ticks)
+      ticks +=1
+      sleep 1
+    end
+  end
+
   def display_info(label, info)
     display(format("%-12s %s", label, info))
   end

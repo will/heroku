@@ -26,7 +26,7 @@ module Heroku::Command
         fake_client = mock("pgbackups_client")
         fake_client.should_receive(:get_latest_backup).and_return({'public_url' => latest_backup_url })
         @pgbackups.should_receive(:pgbackup_client).and_return(fake_client)
-        @pgbackups.should_receive(:display).with(latest_backup_url)
+        @pgbackups.should_receive(:display).with('"'+latest_backup_url+'"')
 
         @pgbackups.url
       end
@@ -40,7 +40,7 @@ module Heroku::Command
         fake_client.should_receive(:get_backup).with(backup_name).and_return({'public_url' => named_url })
         @pgbackups.should_receive(:pgbackup_client).and_return(fake_client)
 
-        @pgbackups.should_receive(:display).with(named_url)
+        @pgbackups.should_receive(:display).with('"'+named_url+'"')
 
         @pgbackups.url
       end
