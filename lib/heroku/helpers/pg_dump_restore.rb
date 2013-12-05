@@ -29,9 +29,20 @@ class PgDumpRestore
   end
 
   def dump_restore_cmd
-    pg_restore = gen_pg_restore_command(@target)
-    pg_dump = gen_pg_dump_command(@source)
-    "#{pg_dump} | #{pg_restore}"
+    dump_env, dump_cmd = gen_pg_restore_command(@target)
+    restore_env, restore_cmd = gen_pg_dump_command(@source)
+    r, w = IO.pipe
+    dump_pid = Process.spawn(dump_env, dump_cmd, :out=>w)
+    restore_pid = Process.spawn(restore_env, restore_cmd, :in=>r)
+   # 2.times do
+   #   wait_pid, wait_status = Process.wait2
+   #   raise "Unexpected child process terminated" unless [dump_pid, restore_pid].include? wait_pid
+   #   raise "Child process terminated unsuccessfully" unless wait_status.success?
+   # end
+
+    Process.waitpid(dump_pid)
+    w.close
+    Process.waitpid(restore_pid)
   end
 
   private
@@ -59,11 +70,15 @@ class PgDumpRestore
   def gen_pg_dump_command(uri)
     # It is occasionally necessary to override PGSSLMODE, as when the server
     # wasn't built to support SSL.
-    %{ env PGPASSWORD=#{uri.password} PGSSLMODE=prefer pg_dump --verbose -F c -Z 0 #{connstring(uri, :skip_d_flag)} }
+    [ {'PGPASSWORD'=>uri.password, 'PGSSLMODE'=>'prefer'},
+      %Q(pg_dump --verbose -F c -Z 0 #{connstring(uri, :skip_d_flag)})
+    ]
   end
 
   def gen_pg_restore_command(uri)
-    %{ env PGPASSWORD=#{uri.password} pg_restore --verbose --no-acl --no-owner #{connstring(uri)} }
+    [ {'PGPASSWORD'=>uri.password},
+      %Q(pg_restore --verbose --no-acl --no-owner #{connstring(uri)})
+    ]
   end
 
   def connstring(uri, skip_d_flag=false)
@@ -109,7 +124,7 @@ EOM
   end
 
   def run
-    system dump_restore_cmd
+    dump_restore_cmd
   end
 end
 
