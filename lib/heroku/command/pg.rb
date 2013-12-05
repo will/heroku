@@ -1,3 +1,4 @@
+require 'open3'
 require "heroku/client/heroku_postgresql"
 require "heroku/command/base"
 require "heroku/helpers/heroku_postgresql"
@@ -335,10 +336,10 @@ private
     @resolver = generate_resolver
     dbs = @resolver.all_databases
 
-    @hpg_databases_with_info = Hash[ 
+    @hpg_databases_with_info = Hash[
       dbs.map do |config, att|
         next if 'DATABASE_URL' == config
-        [att.display_name, hpg_info(att, options[:extended])] 
+        [att.display_name, hpg_info(att, options[:extended])]
       end
     ]
 
@@ -431,7 +432,11 @@ private
     begin
       sslmode = (uri.host == 'localhost' ?  'prefer' : 'require' )
       user_part = uri.user ? "-U #{uri.user}" : ""
-      `env PGPASSWORD=#{uri.password} PGSSLMODE=#{sslmode} psql -c "#{sql}" #{user_part} -h #{uri.host} -p #{uri.port || 5432} #{uri.path[1..-1]}`
+      stdin, stdout, stderr = Open3.popen3(
+        {'PGPASSWORD'=>uri.password, 'PGSSLMODE'=>sslmode},
+        %Q(psql -c "#{sql}" #{user_part} -h #{uri.host} -p #{uri.port || 5432} #{uri.path[1..-1]})
+      )
+      stdout.read
     rescue Errno::ENOENT
       output_with_bang "The local psql command could not be located"
       output_with_bang "For help installing psql, see https://devcenter.heroku.com/articles/heroku-postgresql#local-setup"
